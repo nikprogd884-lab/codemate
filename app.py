@@ -20,7 +20,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": draft_system_prompt}] + messages,
                 max_tokens=2000,
-                temperature=0.7 # Больше креатива для черновика
+                temperature=0.7
             )
             draft = draft_resp.choices[0].message.content
             
@@ -44,7 +44,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
                 model="llama-3.3-70b-versatile",
                 messages=refine_messages,
                 max_tokens=4000,
-                temperature=0.3 # Меньше креатива, больше точности
+                temperature=0.3
             )
             return final_resp.choices[0].message.content
         
@@ -91,7 +91,65 @@ with st.sidebar:
         st.rerun()
     st.caption("Powered by Groq & Llama 3.3")
 
-# --- 5. ОСНОВНОЙ ЭКРАН ---
+# --- 5. СТИЛИ ДЛЯ КНОПКИ ПРОКРУТКИ ---
+st.markdown("""
+<style>
+/* Кнопка прокрутки вниз */
+.scroll-to-bottom {
+    position: fixed;
+    bottom: 80px; /* Выше поля ввода (~60px высота + отступ) */
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: transform 0.2s, background-color 0.2s;
+}
+.scroll-to-bottom:hover {
+    background-color: #45a049;
+    transform: scale(1.1);
+}
+.scroll-to-bottom:active {
+    transform: scale(0.95);
+}
+/* Скрыть стандартную кнопку Streamlit */
+.stButton > button.scroll-fab {
+    display: none;
+}
+</style>
+
+<script>
+// Функция прокрутки в самый низ
+function scrollToBottom() {
+    // Находим контейнер чата
+    const chatContainer = document.querySelector('[data-testid="stVerticalBlock"]');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else {
+        // Запасной вариант: прокрутка всей страницы
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+}
+
+// Добавляем обработчик клика при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const fabButton = document.getElementById('scroll-to-bottom-btn');
+    if (fabButton) {
+        fabButton.addEventListener('click', scrollToBottom);
+    }
+});
+</script>
+""", unsafe_allow_html=True)
+
+# --- 6. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
 st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
 
@@ -102,12 +160,10 @@ for msg in st.session_state.messages:
 
 # Ввод
 if prompt := st.chat_input("Вставь код или задай вопрос..."):
-    # Добавляем вопрос пользователя
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Ответ ИИ
     with st.chat_message("assistant"):
         status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
         with st.spinner(status_text):
@@ -118,3 +174,7 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             )
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
+
+# --- 7. КНОПКА ПРОКРУТКИ (FAB) ---
+# Создаём невидимую кнопку Streamlit, чтобы триггерить JS
+st.markdown('<button id="scroll-to-bottom-btn" class="scroll-to-bottom">↓</button>', unsafe_allow_html=True)
