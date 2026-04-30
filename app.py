@@ -20,7 +20,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": draft_system_prompt}] + messages,
                 max_tokens=2000,
-                temperature=0.7 # Больше креатива для черновика
+                temperature=0.7
             )
             draft = draft_resp.choices[0].message.content
             
@@ -44,7 +44,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
                 model="llama-3.3-70b-versatile",
                 messages=refine_messages,
                 max_tokens=4000,
-                temperature=0.3 # Меньше креатива, больше точности
+                temperature=0.3
             )
             return final_resp.choices[0].message.content
         
@@ -89,9 +89,24 @@ with st.sidebar:
     if st.button("🗑️ Очистить чат"):
         st.session_state.messages = []
         st.rerun()
-    st.caption("Powered by Groq & Llama 3.3")
 
-# --- 5. ОСНОВНОЙ ЭКРАН ---
+# --- 5. АВТОМАТИЧЕСКАЯ ПРОКРУТКА ВНИЗ ---
+st.markdown("""
+<script>
+function autoScroll() {
+    const chatContainer = parent.document.querySelector('[data-testid="stVerticalBlock"]');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else {
+        parent.document.body.scrollTop = parent.document.body.scrollHeight;
+    }
+}
+// Запускаем прокрутку после загрузки
+setTimeout(autoScroll, 100);
+</script>
+""", unsafe_allow_html=True)
+
+# --- 6. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
 st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
 
@@ -119,50 +134,5 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-# --- 6. КНОПКА ПРОКРУТКИ ВНИЗ (FAB) ---
-from streamlit.components.v1 import html
-
-def scroll_to_bottom():
-    js = """
-    <script>
-    function scrollToBottom() {
-        const mainBlock = parent.document.querySelector('[data-testid="stVerticalBlock"]');
-        if (mainBlock) {
-            mainBlock.scrollTop = mainBlock.scrollHeight;
-        } else {
-            parent.document.body.scrollTop = parent.document.body.scrollHeight;
-        }
-    }
-    
-    // Создаём кнопку
-    const button = parent.document.createElement('button');
-    button.innerHTML = '↓';
-    button.style.cssText = `
-        position: fixed;
-        bottom: 80px;
-        right: 20px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999999;
-        transition: transform 0.2s, background-color 0.2s;
-    `;
-    button.onmouseover = () => { button.style.backgroundColor = '#45a049'; button.style.transform = 'scale(1.1)'; };
-    button.onmouseout = () => { button.style.transform = 'scale(1)'; };
-    button.onclick = scrollToBottom;
-    
-    parent.document.body.appendChild(button);
-    </script>
-    """
-    html(js, height=0, width=0)
-
-# Вызываем функцию в самом конце
-scroll_to_bottom()
+    # Автопрокрутка после ответа
+    st.markdown('<script>setTimeout(() => autoScroll(), 100);</script>', unsafe_allow_html=True)
