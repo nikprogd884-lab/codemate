@@ -41,7 +41,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
             ]
             
             final_resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="llama-3.1-8b-instant",
                 messages=refine_messages,
                 max_tokens=4000,
                 temperature=0.3
