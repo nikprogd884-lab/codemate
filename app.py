@@ -9,8 +9,48 @@ def get_ai_response(messages, language="General", deep_thinking=False):
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         
-        # Базовый промпт
-        system_prompt = f"""Ты — CodeMate, опытный Senior Developer.
+        if deep_thinking:
+            # === ЭТАП 1: ГЕНЕРАЦИЯ ЧЕРНОВИКА ===
+            draft_system_prompt = f"""Ты — CodeMate, Senior Developer.
+Твоя задача — создать ПЕРВЫЙ ЧЕРНОВИК решения на языке: {language}.
+Не оптимизируй, не объясняй — просто напиши рабочий код или структуру.
+Если задача непонятна — задай уточняющие вопросы в черновике."""
+            
+            draft_resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": draft_system_prompt}] + messages,
+                max_tokens=2000,
+                temperature=0.7 # Больше креатива для черновика
+            )
+            draft = draft_resp.choices[0].message.content
+            
+            # === ЭТАП 2: АНАЛИЗ И УЛУЧШЕНИЕ ===
+            refine_system_prompt = f"""Ты — CodeMate, эксперт-ревьювер.
+Проанализируй ЧЕРНОВИК и создай финальное решение на языке: {language}.
+Следуй правилам:
+1. Сделай код безопасным, читаемым и эффективным.
+2. Добавь комментарии к сложным местам.
+3. Объясни ключевые архитектурные решения.
+4. Убери лишнее, оптимизируй.
+5. Если в черновике есть ошибки — исправь их.
+6. Ответ должен быть готов к использованию."""
+            
+            refine_messages = [
+                {"role": "system", "content": refine_system_prompt},
+                {"role": "user", "content": f"ЧЕРНОВИК:\n{draft}"}
+            ]
+            
+            final_resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=refine_messages,
+                max_tokens=4000,
+                temperature=0.3 # Меньше креатива, больше точности
+            )
+            return final_resp.choices[0].message.content
+        
+        else:
+            # === БЫСТРЫЙ РЕЖИМ (ОДИН ЭТАП) ===
+            system_prompt = f"""Ты — CodeMate, опытный Senior Developer.
 Твоя задача — помогать с кодом на языке: {language}.
 
 Правила:
@@ -20,23 +60,13 @@ def get_ai_response(messages, language="General", deep_thinking=False):
 4. Используй Markdown для выделения кода (```).
 5. Отвечай кратко, без лишней воды."""
 
-        # Если включен режим глубокого размышления — расширяем промпт
-        if deep_thinking:
-            system_prompt += """
-Дополнительно:
-- Подумай шаг за шагом перед тем, как дать ответ.
-- Рассмотри несколько подходов, если это уместно.
-- Объясни плюсы и минусы предложенного решения.
-- Удели внимание безопасности, читаемости и производительности кода.
-"""
-
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": system_prompt}] + messages,
-            max_tokens=4000 if deep_thinking else 2000,  # Больше токенов для анализа
-            temperature=0.3 if deep_thinking else 0.1   # Чуть больше креатива при анализе
-        )
-        return response.choices[0].message.content
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": system_prompt}] + messages,
+                max_tokens=2000,
+                temperature=0.1
+            )
+            return response.choices[0].message.content
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
@@ -79,7 +109,8 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
 
     # Ответ ИИ
     with st.chat_message("assistant"):
-        with st.spinner("Думаю..." if st.session_state.deep_thinking else "Пишу код..."):
+        status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
+        with st.spinner(status_text):
             response = get_ai_response(
                 st.session_state.messages, 
                 st.session_state.lang, 
