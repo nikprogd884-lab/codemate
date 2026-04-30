@@ -61,7 +61,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
 5. Отвечай кратко, без лишней воды."""
 
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="llama-3.1-8b-instant",
                 messages=[{"role": "system", "content": system_prompt}] + messages,
                 max_tokens=2000,
                 temperature=0.1
