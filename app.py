@@ -1,6 +1,5 @@
 import streamlit as st
 from groq import Groq
-from streamlit.components.v1 import html
 
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ ---
 st.set_page_config(page_title="CodeMate 💻", page_icon="🚀", layout="wide")
@@ -92,6 +91,67 @@ with st.sidebar:
         st.rerun()
     st.caption("Powered by Groq & Llama 3.3")
 
+# --- 6. АНИМАЦИЯ МАТРИЦЫ (фон на весь экран) ---
+st.markdown("""
+<style>
+#matrix-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+}
+</style>
+
+<canvas id="matrix-bg"></canvas>
+
+<script>
+(function() {
+    const canvas = document.getElementById('matrix-bg');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const charArray = chars.split('');
+    const fontSize = 14;
+    let drops = [];
+
+    function initDrops() {
+        const columns = Math.floor(canvas.width / fontSize);
+        drops = Array(columns).fill(0).map(() => Math.random() * -100);
+    }
+    initDrops();
+
+    function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0F0';
+        ctx.font = fontSize + 'px monospace';
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = charArray[Math.floor(Math.random() * charArray.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # --- 5. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
 st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
@@ -111,78 +171,9 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
         status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
         with st.spinner(status_text):
             response = get_ai_response(
-                st.session_state.messages, 
-                st.session_state.lang, 
+                st.session_state.messages,
+                st.session_state.lang,
                 st.session_state.deep_thinking
             )
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
-
-# --- 6. АНИМАЦИЯ МАТРИЦЫ (фон на весь экран) ---
-matrix_html = """
-<style>
-    #matrix-bg {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: -1;
-        background: #000;
-        pointer-events: none;
-    }
-    #matrix-canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-    }
-</style>
-
-<div id="matrix-bg">
-    <canvas id="matrix-canvas"></canvas>
-</div>
-
-<script>
-(function() {
-    const canvas = document.getElementById('matrix-canvas');
-    const ctx = canvas.getContext('2d');
-
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const charArray = chars.split('');
-    const fontSize = 14;
-
-    let columns = Math.floor(canvas.width / fontSize);
-    let drops = Array(columns).fill().map(() => Math.random() * -100);
-
-    function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#0F0';
-        ctx.font = `${fontSize}px monospace`;
-
-        for (let i = 0; i < drops.length; i++) {
-            const text = charArray[Math.floor(Math.random() * charArray.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-            drops[i]++;
-        }
-
-        requestAnimationFrame(draw);
-    }
-
-    draw();
-})();
-</script>
-"""
-
-html(matrix_html, height=0, width=0)
