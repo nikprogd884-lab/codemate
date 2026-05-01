@@ -1,5 +1,6 @@
 import streamlit as st
 from groq import Groq
+import streamlit.components.v1 as components
 
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ ---
 st.set_page_config(page_title="CodeMate 💻", page_icon="🚀", layout="wide")
@@ -10,7 +11,6 @@ def get_ai_response(messages, language="General", deep_thinking=False):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         
         if deep_thinking:
-            # === ЭТАП 1: ГЕНЕРАЦИЯ ЧЕРНОВИКА ===
             draft_system_prompt = f"""Ты — CodeMate, Senior Developer.
 Проанализируй задачу и напиши ЧЕРНОВИК решения на языке: {language}.
 Не оптимизируй, не объясняй — просто запиши рабочий код или структуру.
@@ -24,7 +24,6 @@ def get_ai_response(messages, language="General", deep_thinking=False):
             )
             draft = draft_resp.choices[0].message.content
             
-            # === ЭТАП 2: УЛУЧШЕНИЕ ЧЕРНОВИКА ===
             refine_system_prompt = f"""Ты — CodeMate, эксперт-ревьювер.
 Проанализируй ЧЕРНОВИК и создай финальное решение на языке: {language}.
 Следуй правилам:
@@ -49,7 +48,6 @@ def get_ai_response(messages, language="General", deep_thinking=False):
             return final_resp.choices[0].message.content
         
         else:
-            # === БЫСТРЫЙ РЕЖИМ (ОДИН ЭТАП) ===
             system_prompt = f"""Ты — CodeMate, опытный Senior Developer.
 Твоя задача — помогать с кодом на языке: {language}.
 
@@ -91,32 +89,74 @@ with st.sidebar:
         st.rerun()
     st.caption("Powered by Groq & Llama 3.3")
 
-# --- 6. АНИМАЦИЯ МАТРИЦЫ (фон на весь экран) ---
-st.markdown("""
+# --- 5. ОСНОВНОЙ ЭКРАН ---
+st.title("💻 CodeMate")
+st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
+
+# История чата
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# Ввод
+if prompt := st.chat_input("Вставь код или задай вопрос..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
+        with st.spinner(status_text):
+            response = get_ai_response(
+                st.session_state.messages,
+                st.session_state.lang,
+                st.session_state.deep_thinking
+            )
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
+# --- 6. АНИМАЦИЯ МАТРИЦЫ ---
+components.html("""
+<!DOCTYPE html>
+<html>
+<head>
 <style>
-#matrix-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    pointer-events: none;
-}
+  body { margin: 0; background: transparent; }
 </style>
-
-<canvas id="matrix-bg"></canvas>
-
+</head>
+<body>
 <script>
 (function() {
-    const canvas = document.getElementById('matrix-bg');
+    // Вырываемся из iframe в родительский документ
+    const parentDoc = window.parent.document;
+    const parentBody = parentDoc.body;
+
+    // Удаляем старый canvas если есть
+    const old = parentDoc.getElementById('matrix-canvas-global');
+    if (old) old.remove();
+
+    // Создаём canvas в родительском документе
+    const canvas = parentDoc.createElement('canvas');
+    canvas.id = 'matrix-canvas-global';
+    canvas.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+        background: #000;
+    `;
+    parentBody.insertBefore(canvas, parentBody.firstChild);
+
     const ctx = canvas.getContext('2d');
 
     function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.parent.innerWidth;
+        canvas.height = window.parent.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
+    window.parent.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -150,30 +190,6 @@ st.markdown("""
     draw();
 })();
 </script>
-""", unsafe_allow_html=True)
-
-# --- 5. ОСНОВНОЙ ЭКРАН ---
-st.title("💻 CodeMate")
-st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
-
-# История чата
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# Ввод
-if prompt := st.chat_input("Вставь код или задай вопрос..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
-        with st.spinner(status_text):
-            response = get_ai_response(
-                st.session_state.messages,
-                st.session_state.lang,
-                st.session_state.deep_thinking
-            )
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+</body>
+</html>
+""", height=0)
