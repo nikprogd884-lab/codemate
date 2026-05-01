@@ -1,6 +1,5 @@
 import streamlit as st
 from groq import Groq
-from streamlit.components.v1 import html
 
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ ---
 st.set_page_config(page_title="CodeMate 💻", page_icon="🚀", layout="wide")
@@ -90,9 +89,24 @@ with st.sidebar:
     if st.button("🗑️ Очистить чат"):
         st.session_state.messages = []
         st.rerun()
-    st.caption("Powered by Groq & Llama 3.3")
 
-# --- 5. ОСНОВНОЙ ЭКРАН ---
+# --- 5. АВТОМАТИЧЕСКАЯ ПРОКРУТКА ВНИЗ ---
+st.markdown("""
+<script>
+function autoScroll() {
+    const chatContainer = parent.document.querySelector('[data-testid="stVerticalBlock"]');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else {
+        parent.document.body.scrollTop = parent.document.body.scrollHeight;
+    }
+}
+// Запускаем прокрутку после загрузки
+setTimeout(autoScroll, 100);
+</script>
+""", unsafe_allow_html=True)
+
+# --- 6. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
 st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
 
@@ -103,10 +117,12 @@ for msg in st.session_state.messages:
 
 # Ввод
 if prompt := st.chat_input("Вставь код или задай вопрос..."):
+    # Добавляем вопрос пользователя
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Ответ ИИ
     with st.chat_message("assistant"):
         status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
         with st.spinner(status_text):
@@ -118,64 +134,5 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Автопрокрутка вниз
-    st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
-
-# --- 6. АНИМАЦИЯ МАТРИЦЫ НА ВЕСЬ ФОН ---
-matrix_fullscreen_html = """
-<div id="matrix-bg" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    z-index: -1;
-    pointer-events: none;
-">
-    <canvas id="matrix-canvas" style="display: block; width: 100%; height: 100%;"></canvas>
-</div>
-
-<script>
-(function() {
-    const canvas = document.getElementById('matrix-canvas');
-    const ctx = canvas.getContext('2d');
-
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const charArray = chars.split('');
-    const fontSize = 14;
-    const columns = Math.floor(canvas.width / fontSize);
-    const drops = Array(columns).fill().map(() => Math.random() * -100);
-
-    function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#0F0';
-        ctx.font = `${fontSize}px monospace`;
-
-        for (let i = 0; i < columns; i++) {
-            const text = charArray[Math.floor(Math.random() * charArray.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-            drops[i]++;
-        }
-
-        requestAnimationFrame(draw);
-    }
-
-    draw();
-})();
-</script>
-"""
-
-html(matrix_fullscreen_html, height=1000)  # высота не важна — canvas растягивается на весь экран
+    # Автопрокрутка после ответа
+    st.markdown('<script>setTimeout(() => autoScroll(), 100);</script>', unsafe_allow_html=True)
