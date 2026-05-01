@@ -1,5 +1,6 @@
 import streamlit as st
 from groq import Groq
+from streamlit.components.v1 import html
 
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ ---
 st.set_page_config(page_title="CodeMate 💻", page_icon="🚀", layout="wide")
@@ -41,7 +42,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
             ]
             
             final_resp = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 messages=refine_messages,
                 max_tokens=4000,
                 temperature=0.3
@@ -61,7 +62,7 @@ def get_ai_response(messages, language="General", deep_thinking=False):
 5. Отвечай кратко, без лишней воды."""
 
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": system_prompt}] + messages,
                 max_tokens=2000,
                 temperature=0.1
@@ -89,22 +90,85 @@ with st.sidebar:
     if st.button("🗑️ Очистить чат"):
         st.session_state.messages = []
         st.rerun()
+    st.caption("Powered by Groq & Llama 3.3")
 
-# --- 5. АВТОМАТИЧЕСКАЯ ПРОКРУТКА ВНИЗ ---
+# --- 5. СТИЛИ И АНИМАЦИЯ МАТРИЦЫ ---
 st.markdown("""
-<script>
-function autoScroll() {
-    const chatContainer = parent.document.querySelector('[data-testid="stVerticalBlock"]');
-    if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    } else {
-        parent.document.body.scrollTop = parent.document.body.scrollHeight;
-    }
+<style>
+/* Основные стили */
+* { transition: background-color 0.3s ease, color 0.3s ease; }
+.stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
+
+/* Анимированный фон с падающим кодом (только внизу) */
+.matrix-bg {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    z-index: -1;
+    background: #000;
 }
-// Запускаем прокрутку после загрузки
-setTimeout(autoScroll, 100);
-</script>
+.matrix-bg canvas {
+    display: block;
+}
+</style>
 """, unsafe_allow_html=True)
+
+# JavaScript для анимации "падающего кода"
+matrix_js = """
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('matrix-canvas')) return;
+
+    const container = document.createElement('div');
+    container.className = 'matrix-bg';
+    container.id = 'matrix-canvas-container';
+    document.body.appendChild(container);
+
+    const canvas = document.createElement('canvas');
+    canvas.id = 'matrix-canvas';
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const charArray = chars.split('');
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = [];
+
+    for (let x = 0; x < columns; x++) {
+        drops[x] = Math.random() * -100;
+    }
+
+    function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#0F0';
+        ctx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = charArray[Math.floor(Math.random() * charArray.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+
+    setInterval(draw, 35);
+});
+</script>
+"""
+
+html(matrix_js, height=0, width=0)
 
 # --- 6. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
@@ -134,5 +198,5 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Автопрокрутка после ответа
-    st.markdown('<script>setTimeout(() => autoScroll(), 100);</script>', unsafe_allow_html=True)
+    # Автопрокрутка вниз через JS
+    st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
