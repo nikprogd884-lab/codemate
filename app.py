@@ -118,22 +118,28 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Автопрокрутка вниз
-    st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
-
-# --- 6. АНИМАЦИЯ МАТРИЦЫ (внизу экрана) ---
+# --- 6. АНИМАЦИЯ МАТРИЦЫ (фон на весь экран) ---
 matrix_html = """
-<div id="matrix-bg" style="
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-    z-index: -1;
-    background: #000;
-">
-    <canvas id="matrix-canvas" style="display: block;"></canvas>
+<style>
+    #matrix-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+        background: #000;
+        pointer-events: none;
+    }
+    #matrix-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
+<div id="matrix-bg">
+    <canvas id="matrix-canvas"></canvas>
 </div>
 
 <script>
@@ -142,8 +148,8 @@ matrix_html = """
     const ctx = canvas.getContext('2d');
 
     function resizeCanvas() {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -151,8 +157,9 @@ matrix_html = """
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const charArray = chars.split('');
     const fontSize = 14;
-    const columns = Math.floor(canvas.width / fontSize);
-    const drops = Array(columns).fill().map(() => Math.random() * -100);
+
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill().map(() => Math.random() * -100);
 
     function draw() {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
@@ -161,7 +168,7 @@ matrix_html = """
         ctx.fillStyle = '#0F0';
         ctx.font = `${fontSize}px monospace`;
 
-        for (let i = 0; i < columns; i++) {
+        for (let i = 0; i < drops.length; i++) {
             const text = charArray[Math.floor(Math.random() * charArray.length)];
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
             if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
@@ -178,4 +185,4 @@ matrix_html = """
 </script>
 """
 
-html(matrix_html, height=200, width=1000)
+html(matrix_html, height=0, width=0)
