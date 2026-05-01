@@ -121,85 +121,60 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
     # Автопрокрутка вниз
     st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
 
-# --- 6. АНИМАЦИЯ МАТРИЦЫ НА ВЕСЬ ФОН (ПОЛНОСТЬЮ ИСПРАВЛЕНО) ---
+# --- 6. АНИМАЦИЯ МАТРИЦЫ НА ВЕСЬ ФОН ---
 matrix_fullscreen_html = """
-<style>
-/* КРИТИЧЕСКИ ВАЖНО: перебить все стили Streamlit */
-.stApp {
-    position: relative !important;
-    overflow: hidden !important;
-}
-#matrix-bg {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    overflow: hidden !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-    background-color: #000 !important;
-}
-#matrix-canvas {
-    display: block !important;
-    width: 100% !important;
-    height: 100% !important;
-}
-</style>
-
-<div id="matrix-bg">
-    <canvas id="matrix-canvas"></canvas>
+<div id="matrix-bg" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+">
+    <canvas id="matrix-canvas" style="display: block; width: 100%; height: 100%;"></canvas>
 </div>
 
 <script>
-// Запускаем анимацию после полной загрузки
-window.addEventListener('load', function() {
+(function() {
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
-    
-    // Убедимся, что canvas имеет правильные размеры
+
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
-    
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-    
-    // Настройки анимации
+
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const charArray = chars.split('');
     const fontSize = 14;
     const columns = Math.floor(canvas.width / fontSize);
     const drops = Array(columns).fill().map(() => Math.random() * -100);
-    
+
     function draw() {
-        // Очистим предыдущий кадр
         ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Нарисуем новые символы
+
         ctx.fillStyle = '#0F0';
         ctx.font = `${fontSize}px monospace`;
-        
+
         for (let i = 0; i < columns; i++) {
             const text = charArray[Math.floor(Math.random() * charArray.length)];
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            
-            // Если символ вышел за пределы экрана, вернем его в начало
             if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
                 drops[i] = 0;
             }
-            
             drops[i]++;
         }
-        
+
         requestAnimationFrame(draw);
     }
-    
-    // Запустим анимацию
+
     draw();
-});
+})();
 </script>
 """
 
