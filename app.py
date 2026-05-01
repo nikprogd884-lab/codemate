@@ -92,85 +92,7 @@ with st.sidebar:
         st.rerun()
     st.caption("Powered by Groq & Llama 3.3")
 
-# --- 5. СТИЛИ И АНИМАЦИЯ МАТРИЦЫ ---
-st.markdown("""
-<style>
-/* Основные стили */
-* { transition: background-color 0.3s ease, color 0.3s ease; }
-.stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
-
-/* Анимированный фон с падающим кодом (только внизу) */
-.matrix-bg {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-    z-index: -1;
-    background: #000;
-}
-.matrix-bg canvas {
-    display: block;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# JavaScript для анимации "падающего кода"
-matrix_js = """
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('matrix-canvas')) return;
-
-    const container = document.createElement('div');
-    container.className = 'matrix-bg';
-    container.id = 'matrix-canvas-container';
-    document.body.appendChild(container);
-
-    const canvas = document.createElement('canvas');
-    canvas.id = 'matrix-canvas';
-    container.appendChild(canvas);
-
-    const ctx = canvas.getContext('2d');
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const charArray = chars.split('');
-    const fontSize = 14;
-    const columns = Math.floor(canvas.width / fontSize);
-    const drops = [];
-
-    for (let x = 0; x < columns; x++) {
-        drops[x] = Math.random() * -100;
-    }
-
-    function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#0F0';
-        ctx.font = `${fontSize}px monospace`;
-
-        for (let i = 0; i < drops.length; i++) {
-            const text = charArray[Math.floor(Math.random() * charArray.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-            drops[i]++;
-        }
-    }
-
-    setInterval(draw, 35);
-});
-</script>
-"""
-
-html(matrix_js, height=0, width=0)
-
-# --- 6. ОСНОВНОЙ ЭКРАН ---
+# --- 5. ОСНОВНОЙ ЭКРАН ---
 st.title("💻 CodeMate")
 st.caption(f"Режим: **{st.session_state.lang}** | {'🧠 Глубокий' if st.session_state.deep_thinking else '⚡ Быстрый'}")
 
@@ -181,12 +103,10 @@ for msg in st.session_state.messages:
 
 # Ввод
 if prompt := st.chat_input("Вставь код или задай вопрос..."):
-    # Добавляем вопрос пользователя
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Ответ ИИ
     with st.chat_message("assistant"):
         status_text = "Думаю глубоко..." if st.session_state.deep_thinking else "Пишу код..."
         with st.spinner(status_text):
@@ -198,5 +118,64 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Автопрокрутка вниз через JS
+    # Автопрокрутка вниз
     st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
+
+# --- 6. АНИМАЦИЯ МАТРИЦЫ (внизу экрана) ---
+matrix_html = """
+<div id="matrix-bg" style="
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    z-index: -1;
+    background: #000;
+">
+    <canvas id="matrix-canvas" style="display: block;"></canvas>
+</div>
+
+<script>
+(function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const charArray = chars.split('');
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = Array(columns).fill().map(() => Math.random() * -100);
+
+    function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#0F0';
+        ctx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < columns; i++) {
+            const text = charArray[Math.floor(Math.random() * charArray.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+})();
+</script>
+"""
+
+html(matrix_html, height=200, width=1000)
