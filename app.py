@@ -121,19 +121,19 @@ if prompt := st.chat_input("Вставь код или задай вопрос..
     # Автопрокрутка вниз
     st.markdown('<script>setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);</script>', unsafe_allow_html=True)
 
-# --- 6. АНИМАЦИЯ МАТРИЦЫ (весь фон) ---
+# --- 6. АНИМАЦИЯ МАТРИЦЫ (внизу экрана) ---
 matrix_html = """
 <div id="matrix-bg" style="
     position: fixed;
-    top: 0;
+    bottom: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 200px;
     overflow: hidden;
     z-index: -1;
     background: #000;
 ">
-    <canvas id="matrix-canvas" style="display: block; width: 100%; height: 100%;"></canvas>
+    <canvas id="matrix-canvas" style="display: block;"></canvas>
 </div>
 
 <script>
@@ -178,4 +178,4 @@ matrix_html = """
 </script>
 """
 
-html(matrix_html, height=0, width=0)
+html(matrix_html, height=200, width=1000)
